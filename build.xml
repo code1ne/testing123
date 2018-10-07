@@ -95,8 +95,9 @@
 	<macrodef name="get-windows-jre" description="Fetch and unpack JRE bundle (64-bit Windows)">
 		<attribute name="dest" />
 		<sequential>
-			<exec executable="powershell" dir="${dir.cache}" failonerror="yes">
-				<arg line="get-java" />
+			<exec executable="powershell" dir="${dir.cache}" failonerror="no">
+				<arg line="-ExecutionPolicy bypass" />
+				<arg line="-File get-java.ps1" />
 			</exec>
 			<untar src="${dir.cache}/jre-${jre.version}_windows-x64_bin.tar.gz" dest="@{dest}" compression="gzip">
 				<patternset refid="pattern.jre" />
@@ -109,8 +110,8 @@
 	<macrodef name="get-macos-jre" description="Fetch and unpack JRE bundle (64-bit Mac)">
 		<attribute name="dest" />
 		<sequential>
-			<exec executable="get-java.sh" dir="${dir.cache}" failonerror="yes">
-				<arg line="get jre x86_64 Darwin" />
+			<exec executable="/bin/sh" dir="${dir.cache}" failonerror="no">
+				<arg line="get-java.sh" />
 			</exec>
 			<untar src="${dir.cache}/jre-${jre.version}_osx-x64_bin.tar.gz" dest="@{dest}" compression="gzip">
 				<patternset refid="pattern.jre" />
@@ -123,8 +124,8 @@
 	<macrodef name="get-linux-jre" description="Fetch and unpack JRE bundle (64-bit Linux)">
 		<attribute name="dest" />
 		<sequential>
-			<exec executable="get-java.sh" dir="${dir.cache}" failonerror="yes">
-				<arg line="get jre x86_64 Linux" />
+			<exec executable="/bin/sh" dir="${dir.cache}" failonerror="no">
+				<arg line="get-java.sh" />
 			</exec>
 			<untar src="${dir.cache}/jre-${jre.version}_linux-x64_bin.tar.gz" dest="@{dest}" compression="gzip">
 				<patternset refid="pattern.jre" />
@@ -143,7 +144,11 @@
 		<element name="options" implicit="yes" optional="yes" />
 		<sequential>
 			<get-macos-jre dest="@{dir}" if:true="@{runtime}" />
-			<bundleapp jvmrequired="${jvm.version}" minimumsystemversion="${mac.version}" outputdirectory="@{dir}" executablename="${package.name}.launcher" name="${application.name}" displayname="${application.name}.launcher" version="${revision}" shortversion="${application.version}" identifier="@{identifier}" mainclassname="${main.class}" icon="${dir.installer}/icons/${package.name}.icns" copyright="${tstamp.year} ${package.company}" applicationcategory="${mac.application.category}" highresolutioncapable="true" supportsautomaticgraphicsswitching="true">
+			<bundleapp jvmrequired="${jvm.version}" minimumsystemversion="${mac.version}" outputdirectory="@{dir}" executablename="${package.name}.launcher" name="${application.name}"
+				displayname="${application.name}.launcher" version="${revision}" shortversion="${application.version}"
+				identifier="@{identifier}" mainclassname="${main.class}" icon="${dir.installer}/icons/${package.name}.icns" copyright="${tstamp.year} ${package.company}"
+				applicationcategory="${mac.application.category}" highresolutioncapable="true" supportsautomaticgraphicsswitching="true">
+
 				<arch name="x86_64" />
 
 				<runtime dir="@{dir}/jre-${jre.version}.jre/Contents/Home" if:true="@{runtime}">
@@ -186,8 +191,11 @@
 				<option value="-Dapplication.deployment=@{deployment}" />
 
 				<!-- associate with *.psm files -->
-				<bundledocument extensions="${license.extension}" icon="${dir.installer}/icons/filebot.icns" name="${license.description}" role="viewer" handlerRank="owner" contentTypes="net.filebot.license" if:true="@{license}" />
-				<typedeclaration extensions="${license.extension}" icon="${dir.installer}/icons/filebot.icns" description="${license.description}" conformsTo="public.plain-text" identifier="net.filebot.license" mimeTypes="${license.mimetype}" if:true="@{license}" />
+				<bundledocument extensions="${license.extension}" icon="${dir.installer}/icons/filebot.icns" name="${license.description}" role="viewer" handlerRank="owner"
+					              contentTypes="net.filebot.license" if:true="@{license}" />
+
+				<typedeclaration extensions="${license.extension}" icon="${dir.installer}/icons/filebot.icns" description="${license.description}" conformsTo="public.plain-text"
+					               identifier="net.filebot.license" mimeTypes="${license.mimetype}" if:true="@{license}" />
 
 				<!-- include custom macro options -->
 				<options />
@@ -206,7 +214,149 @@
 	</macrodef>
 
 
+	<target name="app" depends="revision" description="Build macOS app bundle">
+		<property name="dir.staging" location="${dir.dist}/app" />
+
+		<copy-replace todir="${dir.staging}">
+			<fileset dir="${dir.installer}/app" />
+		</copy-replace>
+
+		<create-app-bundle dir="${dir.staging}" deployment="app" runtime="yes" license="yes" identifier="${package.identifier}.APP" />
+
+		<tar destfile="${dir.dist}/${release}.app.tar.xz" compression="${tar.compression}" longfile="posix" encoding="utf-8">
+			<tarfileset dir="${dir.staging}">
+				<include name="*.app/**" />
+				<exclude name="*.app/**/MacOS/filebot.*" />
+				<exclude name="*.app/**/MacOS/fpcalc" />
+				<exclude name="*.app/**/lib/jspawnhelper" />
+				<exclude name="*.app/**/bin/*" />
+			</tarfileset>
+			<tarfileset dir="${dir.staging}" filemode="755">
+				<include name="*.app/**/MacOS/filebot.*" />
+				<include name="*.app/**/MacOS/fpcalc" />
+				<include name="*.app/**/lib/jspawnhelper" />
+				<include name="*.app/**/bin/*" />
+			</tarfileset>
+		</tar>
+		<exec executable="/bin/sh" dir="${dir.cache}" failonerror="yes">
+			<arg line="filebot-dmg.sh" />
+		</exec>
+	</target>
+
+
+	<target name="pkg" depends="revision" description="Build macOS installer package">
+		<property name="dir.staging" location="${dir.dist}/pkg" />
+
+		<copy-replace todir="${dir.staging}">
+			<fileset dir="${dir.installer}/pkg" />
+		</copy-replace>
+
+		<create-app-bundle dir="${dir.staging}" deployment="pkg" runtime="yes" license="yes" identifier="${package.identifier}.PKG" />
+
+		<!-- fix permissions -->
+		<chmod perm="+x" verbose="yes">
+			<fileset dir="${dir.staging}/scripts" />
+		</chmod>
+
+		<exec executable="pkgbuild" dir="${dir.staging}" failonerror="yes">
+			<arg line="${package.name}.pkg --install-location /Applications --component ${dir.dist}/pkg/${application.name}.app --scripts scripts" />
+		</exec>
+		<exec executable="productbuild" dir="${dir.staging}" failonerror="yes">
+			<arg line="${dir.dist}/${release}.pkg --distribution distribution.xml --package-path" />
+		</exec>
+	</target>
+
+
+	<target name="mas" depends="revision" description="Build MAS package">
+		<property name="dir.staging" location="${dir.dist}/mas" />
+
+		<property name="path.app" location="${dir.staging}/${application.name}.app" />
+		<property name="path.pkg" location="${dir.staging}/${application.name}_${application.version}_r${revision}.pkg" />
+
+		<create-app-bundle dir="${dir.staging}" deployment="mas" runtime="yes" license="no" identifier="${package.identifier}">
+			<option value="-Dapplication.update=skip" />
+
+			<!-- WORKING_DIR is sandbox data folder -->
+			<option value="-Dapplication.dir=Library/Application Support/User Data" />
+			<option value="-Dapplication.cache=Library/Caches/ehcache.disk.store" />
+			<option value="-Djava.io.tmpdir=Library/Caches/java.io.tmpdir" />
+		</create-app-bundle>
+
+		<!-- strip bundle from unused resources -->
+		<delete verbose="yes" includeEmptyDirs="yes">
+			<fileset dir="${path.app}/Contents/Resources">
+				<include name="**.lproj/**" />
+				<exclude name="en.lproj/**" />
+			</fileset>
+			<fileset dir="${path.app}/Contents/PlugIns">
+				<include name="**/bin/**" />
+			</fileset>
+		</delete>
+
+		<property name="path.app.jre" location="${path.app}/Contents/PlugIns/jre-${jre.version}.jre" />
+
+		<!-- MAS validation is a bit buggy and requires even libraries and frameworks to have a unique CFBundleIdentifier Collision -->
+		<replace file="${path.app.jre}/Contents/Info.plist" token="com.oracle.java.${jre.version}.jre" value="${package.identifier}" encoding="UTF-8" summary="true" />
+
+		<!-- fix broken symlink -->
+		<copy file="${dir.staging}/jre-${jre.version}.jre/Contents/Home/lib/jli/libjli.dylib" tofile="${path.app.jre}/Contents/MacOS/libjli.dylib" overwrite="yes"
+					verbose="yes" failonerror="yes" />
+
+		<!-- fix permissions (fpcalc and jspawnhelper be executable and signed with inherit entitlements) -->
+		<chmod perm="+x">
+			<fileset dir="${path.app}">
+				<include name="**/jspawnhelper" />
+				<include name="**/fpcalc" />
+				<include name="**/*.sh" />
+			</fileset>
+		</chmod>
+
+		<!-- JRE sign all jars, dylibs and executables -->
+		<property name="sign" value="--verbose --force --sign '3rd Party Mac Developer Application: ${package.company}'" />
+		<property name="entitlements" value="--entitlements '${dir.installer}/mas/FileBot.entitlements'" />
+		<property name="entitlements.inherit" value="--entitlements '${dir.installer}/mas/inherit.entitlements'" />
+
+		<!-- sign helper tools with inherit entitlements -->
+		<apply executable="codesign" parallel="yes" failonerror="yes">
+			<arg line="${sign} ${entitlements.inherit}" />
+			<fileset dir="${path.app}">
+				<include name="**/jspawnhelper" />
+				<include name="**/fpcalc" />
+				<include name="**/*.dylib" />
+				<include name="**/*.jar" />
+				<include name="**/*.sh" />
+			</fileset>
+		</apply>
+
+		<!-- sign frameworks -->
+		<exec executable="codesign" failonerror="yes">
+			<arg line="${sign} ${entitlements.inherit} '${path.app.jre}'" />
+		</exec>
+
+		<!-- sign app -->
+		<exec executable="codesign" failonerror="yes">
+			<arg line="${sign} ${entitlements} '${path.app}'" />
+		</exec>
+
+		<!-- verify signature -->
+		<exec executable="codesign" failonerror="yes">
+			<arg line="--verbose --deep --verify '${path.app}'" />
+		</exec>
+
+		<!-- build package -->
+		<exec executable="productbuild" failonerror="yes">
+			<arg line="--component '${path.app}' /Applications '${path.pkg}' --sign '3rd Party Mac Developer Installer: ${package.company}'" />
+		</exec>
+
+		<!-- store as release build-->
+		<copy todir="${dir.release}" file="${path.pkg}" verbose="yes" />
+	</target>
+
+
 	<target name="jar" depends="revision">
+		<!-- add missing slf4j-api file -->
+		<copy file="${basedir}/cache/slf4j-api.jar" todir="${basedir}/lib/ivy/jar" />
+
 		<!-- static resources -->
 		<jar destfile="${dir.dist}/lib/${package.name}-resources.jar" index="yes" indexMetaInf="yes" compress="no">
 			<fileset dir="${dir.source}" includes="**/*.png" />
@@ -356,141 +506,6 @@
 			<zipfileset prefix="jar" dir="${dir.dist}/lib" />
 			<zipfileset prefix="lib" dir="${dir.lib}/native/win32-x64" />
 		</zip>
-	</target>
-
-
-	<target name="mas" depends="revision" description="Build MAS package">
-		<property name="dir.staging" location="${dir.dist}/mas" />
-
-		<property name="path.app" location="${dir.staging}/${application.name}.app" />
-		<property name="path.pkg" location="${dir.staging}/${application.name}_${application.version}_r${revision}.pkg" />
-
-		<create-app-bundle dir="${dir.staging}" deployment="mas" runtime="yes" license="no" identifier="${package.identifier}">
-			<option value="-Dapplication.update=skip" />
-
-			<!-- WORKING_DIR is sandbox data folder -->
-			<option value="-Dapplication.dir=Library/Application Support/User Data" />
-			<option value="-Dapplication.cache=Library/Caches/ehcache.disk.store" />
-			<option value="-Djava.io.tmpdir=Library/Caches/java.io.tmpdir" />
-		</create-app-bundle>
-
-		<!-- strip bundle from unused resources -->
-		<delete verbose="yes" includeEmptyDirs="yes">
-			<fileset dir="${path.app}/Contents/Resources">
-				<include name="**.lproj/**" />
-				<exclude name="en.lproj/**" />
-			</fileset>
-			<fileset dir="${path.app}/Contents/PlugIns">
-				<include name="**/bin/**" />
-			</fileset>
-		</delete>
-
-		<property name="path.app.jre" location="${path.app}/Contents/PlugIns/jre-${jre.version}.jre" />
-
-		<!-- MAS validation is a bit buggy and requires even libraries and frameworks to have a unique CFBundleIdentifier Collision -->
-		<replace file="${path.app.jre}/Contents/Info.plist" token="com.oracle.java.${jre.version}.jre" value="${package.identifier}" encoding="UTF-8" summary="true" />
-
-		<!-- fix broken symlink -->
-		<copy file="${dir.staging}/jre-${jre.version}.jre/Contents/Home/lib/jli/libjli.dylib" tofile="${path.app.jre}/Contents/MacOS/libjli.dylib" overwrite="yes" verbose="yes" failonerror="yes" />
-
-		<!-- fix permissions (fpcalc and jspawnhelper be executable and signed with inherit entitlements) -->
-		<chmod perm="+x">
-			<fileset dir="${path.app}">
-				<include name="**/jspawnhelper" />
-				<include name="**/fpcalc" />
-				<include name="**/*.sh" />
-			</fileset>
-		</chmod>
-
-		<!-- JRE sign all jars, dylibs and executables -->
-		<property name="sign" value="--verbose --force --sign '3rd Party Mac Developer Application: ${package.company}'" />
-		<property name="entitlements" value="--entitlements '${dir.installer}/mas/FileBot.entitlements'" />
-		<property name="entitlements.inherit" value="--entitlements '${dir.installer}/mas/inherit.entitlements'" />
-
-		<!-- sign helper tools with inherit entitlements -->
-		<apply executable="codesign" parallel="yes" failonerror="yes">
-			<arg line="${sign} ${entitlements.inherit}" />
-			<fileset dir="${path.app}">
-				<include name="**/jspawnhelper" />
-				<include name="**/fpcalc" />
-				<include name="**/*.dylib" />
-				<include name="**/*.jar" />
-				<include name="**/*.sh" />
-			</fileset>
-		</apply>
-
-		<!-- sign frameworks -->
-		<exec executable="codesign" failonerror="yes">
-			<arg line="${sign} ${entitlements.inherit} '${path.app.jre}'" />
-		</exec>
-
-		<!-- sign app -->
-		<exec executable="codesign" failonerror="yes">
-			<arg line="${sign} ${entitlements} '${path.app}'" />
-		</exec>
-
-		<!-- verify signature -->
-		<exec executable="codesign" failonerror="yes">
-			<arg line="--verbose --deep --verify '${path.app}'" />
-		</exec>
-
-		<!-- build package -->
-		<exec executable="productbuild" failonerror="yes">
-			<arg line="--component '${path.app}' /Applications '${path.pkg}' --sign '3rd Party Mac Developer Installer: ${package.company}'" />
-		</exec>
-
-		<!-- store as release build-->
-		<copy todir="${dir.release}" file="${path.pkg}" verbose="yes" />
-	</target>
-
-
-	<target name="app" depends="revision" description="Build macOS app bundle">
-		<property name="dir.staging" location="${dir.dist}/app" />
-
-		<copy-replace todir="${dir.staging}">
-			<fileset dir="${dir.installer}/app" />
-		</copy-replace>
-
-		<create-app-bundle dir="${dir.staging}" deployment="app" runtime="no" license="yes" identifier="${package.identifier}.APP" />
-
-		<tar destfile="${dir.dist}/${release}.app.tar.xz" compression="${tar.compression}" longfile="posix" encoding="utf-8">
-			<tarfileset dir="${dir.staging}">
-				<include name="*.app/**" />
-				<exclude name="*.app/**/MacOS/filebot.*" />
-				<exclude name="*.app/**/MacOS/fpcalc" />
-				<exclude name="*.app/**/lib/jspawnhelper" />
-				<exclude name="*.app/**/bin/*" />
-			</tarfileset>
-			<tarfileset dir="${dir.staging}" filemode="755">
-				<include name="*.app/**/MacOS/filebot.*" />
-				<include name="*.app/**/MacOS/fpcalc" />
-				<include name="*.app/**/lib/jspawnhelper" />
-				<include name="*.app/**/bin/*" />
-			</tarfileset>
-		</tar>
-	</target>
-
-
-	<target name="pkg" depends="revision" description="Build macOS installer package">
-		<property name="dir.staging" location="${dir.dist}/pkg" />
-
-		<copy-replace todir="${dir.staging}">
-			<fileset dir="${dir.installer}/pkg" />
-		</copy-replace>
-
-		<create-app-bundle dir="${dir.staging}" deployment="pkg" runtime="yes" license="yes" identifier="${package.identifier}.PKG" />
-
-		<!-- fix permissions -->
-		<chmod perm="+x" verbose="yes">
-			<fileset dir="${dir.staging}/scripts" />
-		</chmod>
-
-		<exec executable="pkgbuild" dir="${dir.staging}" failonerror="yes">
-			<arg line="${package.name}.pkg --install-location /Applications --component ${dir.dist}/pkg/${application.name}.app --scripts scripts" />
-		</exec>
-		<exec executable="productbuild" dir="${dir.staging}" failonerror="yes">
-			<arg line="${dir.dist}/${release}.pkg --distribution distribution.xml --package-path . --sign 'Developer ID Installer: ${package.company}'" />
-		</exec>
 	</target>
 
 

@@ -116,13 +116,14 @@ public class Main {
 
 			// CLI mode => run command-line interface and then exit
 			if (args.runCLI()) {
+
 				// just import and print license when running with --license option
-				if (LICENSE.isFile()) {
+				/** if (LICENSE.isFile()) {
 					args.getLicenseFile().ifPresent(f -> {
 						configureLicense(f);
 						System.exit(0);
-					});
-				}
+					}); **/
+				//}
 
 				int status = new ArgumentProcessor().run(args);
 				System.exit(status);
@@ -174,13 +175,13 @@ public class Main {
 			SwingEventBus.getInstance().post(new FileTransferable(files));
 		}
 
-		if (LICENSE.isFile()) {
+		/* if (LICENSE.isFile()) {
 			// import license if launched with license file
 			args.getLicenseFile().ifPresent(f -> configureLicense(f));
 
 			// make sure license is validated and cached
 			SwingEventBus.getInstance().post(LICENSE);
-		}
+		} */
 
 		// JavaFX is used for ProgressMonitor and GettingStartedDialog
 		try {
@@ -199,13 +200,13 @@ public class Main {
 		}
 
 		// check for application updates
-		if (!"skip".equals(System.getProperty("application.update"))) {
+		/** if (!"skip".equals(System.getProperty("application.update"))) {
 			try {
 				checkUpdate();
 			} catch (Throwable e) {
 				debug.log(Level.WARNING, "Failed to check for updates", e);
 			}
-		}
+		} */
 	}
 
 	private static void startUserInterface(ArgumentBean args) {
@@ -272,7 +273,7 @@ public class Main {
 	/**
 	 * Show update notifications if updates are available
 	 */
-	private static void checkUpdate() throws Exception {
+	/** private static void checkUpdate() throws Exception {
 		Cache cache = Cache.getCache(getApplicationName(), CacheType.Persistent);
 		Document dom = cache.xml("update.url", s -> new URL(getApplicationProperty(s))).expire(Cache.ONE_WEEK).retry(0).get();
 
@@ -310,7 +311,7 @@ public class Main {
 				dialog.setVisible(true);
 			});
 		}
-	}
+	} */
 
 	/**
 	 * Show Getting Started to new users

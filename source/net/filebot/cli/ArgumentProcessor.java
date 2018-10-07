@@ -38,7 +38,9 @@ public class ArgumentProcessor {
 			// script finished successfully
 			log.finest("Done ヾ(＠⌒ー⌒＠)ノ");
 			return 0;
-		} catch (LicenseError e) {
+		}
+
+		/*catch (LicenseError e) {
 			log.severe("License Error: " + e.getMessage());
 			if (LICENSE.isFile()) {
 				printStegosaurus("Please purchase a FileBot License:", getPurchaseURL());
@@ -51,7 +53,9 @@ public class ArgumentProcessor {
 				}
 			}
 			return 2;
-		} catch (Throwable e) {
+		} */
+
+		catch (Throwable e) {
 			if (findCause(e, CmdlineException.class) != null) {
 				log.log(Level.WARNING, findCause(e, CmdlineException.class).getMessage());
 			} else if (findCause(e, ScriptDeath.class) != null) {

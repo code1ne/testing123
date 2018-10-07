@@ -582,7 +582,7 @@ public class CmdlineOperations implements CmdlineInterface {
 
 		// allow --action test for evaluation purposes
 		if (renameAction != StandardRenameAction.TEST) {
-			LICENSE.check();
+			//LICENSE.check();
 		}
 
 		// rename files

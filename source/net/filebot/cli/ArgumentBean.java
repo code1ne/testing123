@@ -1,5 +1,6 @@
 package net.filebot.cli;
 
+import static java.awt.GraphicsEnvironment.*;
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
 import static net.filebot.Logging.*;
@@ -148,14 +149,14 @@ public class ArgumentBean {
 	@Option(name = "-help", usage = "Print this help message")
 	public boolean help = false;
 
-	@Option(name = "--license", usage = "Import license file", metaVar = "file.psm")
-	public String license = null;
+	/*@Option(name = "--license", usage = "Import license file", metaVar = "file.psm")
+	public String license = null;*/
 
 	@Argument
 	public List<String> arguments = new ArrayList<String>();
 
 	public boolean runCLI() {
-		return rename || getSubtitles || check || list || mediaInfo || revert || extract || script != null || (license != null && System.console() != null);
+		return rename || getSubtitles || check || list || mediaInfo || revert || extract || script != null; /*|| (license != null && isHeadless())*/
 	}
 
 	public boolean isInteractive() {
@@ -351,9 +352,9 @@ public class ArgumentBean {
 		}).orElseThrow(error("Illegal mode", mode));
 	}
 
-	public Optional<File> getLicenseFile() {
+	/*public Optional<File> getLicenseFile() {
 		return optional(license).map(File::new);
-	}
+	}*/
 
 	private final String[] args;
 

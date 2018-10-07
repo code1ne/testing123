@@ -90,9 +90,9 @@ class RenameAction extends AbstractAction {
 			// start processing
 			Map<File, File> renameLog = new LinkedHashMap<File, File>();
 
-			try {
+			//try {
 				// require valid license for rename mode
-				LICENSE.check();
+				//LICENSE.check();
 
 				if (useNativeShell() && NativeRenameAction.isSupported(action)) {
 					// call on EDT
@@ -104,7 +104,9 @@ class RenameAction extends AbstractAction {
 					String message = String.format("%s %d %s. This may take a while.", action.getDisplayVerb(), renameMap.size(), renameMap.size() == 1 ? "file" : "files");
 					ProgressMonitor.runTask(action.getDisplayName(), message, worker).get();
 				}
-			} catch (LicenseError e) {
+			//}
+
+		/**	catch (LicenseError e) {
 				if (LICENSE.isFile()) {
 					JComponent source = (JComponent) evt.getSource();
 					createLicensePopup(e.getMessage(), evt).show(source, -3, source.getHeight() + 4);
@@ -115,7 +117,7 @@ class RenameAction extends AbstractAction {
 				debug.finest(e::toString);
 			} catch (Throwable e) {
 				log.log(Level.SEVERE, e, cause(getRootCause(e)));
-			}
+			} */
 
 			// abort if nothing happened
 			if (renameLog.isEmpty()) {
@@ -240,7 +242,7 @@ class RenameAction extends AbstractAction {
 		return emptyMap();
 	}
 
-	private ActionPopup createLicensePopup(String message, ActionEvent evt) {
+	/** private ActionPopup createLicensePopup(String message, ActionEvent evt) {
 		ActionPopup actionPopup = new ActionPopup("License Required", ResourceManager.getIcon("file.lock"));
 
 		actionPopup.add(newAction("Select License", ResourceManager.getIcon("license.import"), e -> {
@@ -260,7 +262,7 @@ class RenameAction extends AbstractAction {
 		actionPopup.setStatus(message);
 
 		return actionPopup;
-	}
+	} */
 
 	protected static class StandardRenameWorker implements ProgressWorker<Map<File, File>> {
 
